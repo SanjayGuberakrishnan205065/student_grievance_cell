@@ -1,0 +1,153 @@
+import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { useAuth } from "../../../context/AuthContext";
+import DangerAlert from "../../../components/alerts/DangerAlert";
+import { useNavigate } from "react-router-dom";
+import ClipLoaderWithText from "../../../components/loaders/ClipLoaderWithText";
+
+const SubmitGrievance = () => {
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const [errorMsg, setErrorMsg] = useState("");
+  const [grievanceTypes, setGrievanceTypes] = useState([]);
+  const [deptStaffs, setDeptStaffs] = useState([]);
+  const [creatingGrievance, setCreatingGrievance] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+  const onSubmit = (data) => {
+    setCreatingGrievance(true);
+    axios.post("/api/grievance", data).then((res) => {
+      setCreatingGrievance(false);
+      navigate("/student/grievances/view/" + res.data.grievance._id);
+    });
+  };
+  useEffect(() => {
+    axios.get("/api/grievance/types").then((res) => {
+      setGrievanceTypes(res.data.grievanceTypes);
+    });
+    axios.get(`/api/staff/department/${auth.user.department}`).then((res) => {
+      setDeptStaffs(res.data.staffs);
+    });
+  }, []);
+  return (
+    <div className="container mx-auto flex justify-center">
+      <div className="flex-grow max-w-5xl px-3">
+        <h1 className="text-4xl my-3">Raise a new grievance</h1>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="mb-4">
+            <label className="block mb-2 text-xl font-medium">
+              Grievance Title
+            </label>
+            <input
+              className={
+                "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" +
+                (errors.title ? " border-red-500 dark:border-red-500" : "")
+              }
+              placeholder="Grievance Title"
+              {...register("title", {
+                required: "Grievance title is required",
+              })}
+            />
+            {errors.title && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-500">
+                {errors.title?.message}
+              </p>
+            )}
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 text-xl font-medium">
+              Describe your grievance
+            </label>
+            <textarea
+              className={
+                "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" +
+                (errors.description
+                  ? " border-red-500 dark:border-red-500"
+                  : "")
+              }
+              placeholder="Grievance Description"
+              {...register("description", {
+                required: "Grievance description is required",
+              })}
+            />
+            {errors.description && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-500">
+                {errors.description?.message}
+              </p>
+            )}
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 text-xl font-medium">
+              Grievance Type
+            </label>
+            <select
+              {...register("grievanceType", { required: true })}
+              className={
+                "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" +
+                (errors.grievanceType
+                  ? "border-red-500 dark:border-red-500"
+                  : "")
+              }
+            >
+              <option value="">Select Grievance Type</option>
+              {grievanceTypes.map((grievanceType) => (
+                <option key={grievanceType._id} value={grievanceType._id}>
+                  {grievanceType.name}
+                </option>
+              ))}
+            </select>
+            {errors.grievanceType && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-500">
+                Grievance type is required
+              </p>
+            )}
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 text-xl font-medium">
+              Staff to assign
+            </label>
+            <select
+              className={
+                "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" +
+                (errors.staffAssigned
+                  ? " border-red-500 dark:border-red-500"
+                  : "")
+              }
+              {...register("staffAssigned", { required: true })}
+            >
+              <option value="">Select Staff</option>
+              {deptStaffs.map((staff) => (
+                <option key={staff._id} value={staff._id}>
+                  {staff.name} ({staff.designation})
+                </option>
+              ))}
+            </select>
+            {errors.staffAssigned && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-500">
+                Staff is required
+              </p>
+            )}
+          </div>
+          <div>{errorMsg && <DangerAlert alertContent={errorMsg} />}</div>
+          <div className="mb-6">
+            {creatingGrievance ? (
+              <ClipLoaderWithText text="Creating grievance..." />
+            ) : (
+              <button
+                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                type="submit"
+              >
+                Raise Grievance
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+export default SubmitGrievance;
